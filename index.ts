@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
-import productsRouter from './routes/products';
+import productsRouter from './src/routes/products';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 
