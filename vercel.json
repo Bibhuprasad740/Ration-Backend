@@ -1,10 +1,16 @@
 {
   "version": 2,
-  "name": "native-server",
+  "name": "ration-backend",
   "builds": [
-    { "src": "src/index.ts", "use": "@vercel/node" }
+    {
+      "src": "dist/index.js",
+      "use": "@vercel/node"
+    }
   ],
   "routes": [
-    { "src": "/(.*)", "dest": "src/index.ts" }
+    {
+      "src": "/(.*)",
+      "dest": "dist/index.js"
+    }
   ]
 }
