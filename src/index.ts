@@ -19,23 +19,59 @@ app.get('/health', (_req, res) => {
 
 app.use('/api', productsRouter);
 
-const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
+// MongoDB connection with connection reuse for serverless
+let isConnected = false;
 
-async function start() {
+async function connectToDatabase() {
+  if (isConnected) {
+    return;
+  }
+
   const mongoUrl = process.env.MONGODB_URL;
   if (!mongoUrl) {
     throw new Error('MONGODB_URL is not set in environment');
   }
 
-  await mongoose.connect(mongoUrl);
-  console.log('Connected to MongoDB');
+  try {
+    await mongoose.connect(mongoUrl, {
+      bufferCommands: false, // Disable mongoose buffering
+      serverSelectionTimeoutMS: 5000, // Keep trying to send operations for 5 seconds
+      socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
+    });
+    isConnected = true;
+    console.log('Connected to MongoDB');
+  } catch (error) {
+    console.error('MongoDB connection error:', error);
+    throw error;
+  }
+}
 
-  app.listen(PORT, () => {
-    console.log(`Server listening on http://localhost:${PORT}`);
+// Middleware to ensure database connection
+app.use(async (req, res, next) => {
+  try {
+    await connectToDatabase();
+    next();
+  } catch (error) {
+    res.status(500).json({ error: 'Database connection failed' });
+  }
+});
+
+const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
+
+// For local development
+if (process.env.NODE_ENV !== 'production') {
+  async function start() {
+    await connectToDatabase();
+    app.listen(PORT, () => {
+      console.log(`Server listening on http://localhost:${PORT}`);
+    });
+  }
+
+  start().catch((err) => {
+    console.error('Failed to start server', err);
+    process.exit(1);
   });
 }
 
-start().catch((err) => {
-  console.error('Failed to start server', err);
-  process.exit(1);
-});
+// Export for Vercel
+export default app;
